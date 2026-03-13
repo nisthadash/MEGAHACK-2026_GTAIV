@@ -1,14 +1,12 @@
-import { Play, Sparkles, Cpu, Settings, BarChart3, Eye, LogOut } from "lucide-react";
+import { Play, Sparkles, Cpu, Settings, BarChart3, Eye, LogOut, User, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 
 interface TopNavBarProps {
   onRunCode: () => void;
-  onExplainCode: () => void;
-  onAIAnalyze: () => void;
 }
 
-export function TopNavBar({ onRunCode, onExplainCode, onAIAnalyze }: TopNavBarProps) {
+export function TopNavBar({ onRunCode }: TopNavBarProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -35,18 +33,6 @@ export function TopNavBar({ onRunCode, onExplainCode, onAIAnalyze }: TopNavBarPr
           variant="success"
         />
         <ActionButton
-          icon={<Sparkles className="w-4 h-4" />}
-          label="Explain Code"
-          onClick={onExplainCode}
-          variant="primary"
-        />
-        <ActionButton
-          icon={<Cpu className="w-4 h-4" />}
-          label="AI Analyze"
-          onClick={onAIAnalyze}
-          variant="secondary"
-        />
-        <ActionButton
           icon={<Eye className="w-4 h-4" />}
           label="Visualize"
           onClick={() => navigate("/visualize")}
@@ -60,8 +46,20 @@ export function TopNavBar({ onRunCode, onExplainCode, onAIAnalyze }: TopNavBarPr
         />
       </div>
 
-      {/* Settings & Logout */}
-      <div className="flex items-center gap-2">
+      {/* User Bar & Settings */}
+      <div className="flex items-center gap-3">
+        {/* User Profile Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center gap-2 px-3 h-9 rounded-lg bg-[#1f2937] hover:bg-[#374151] transition-all border border-[#374151] hover:border-[#3b82f6]/30"
+        >
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22c55e] to-[#3b82f6] flex items-center justify-center">
+            <User className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-sm text-[#e5e7eb]">Developer</span>
+          <ChevronDown className="w-3.5 h-3.5 text-[#9ca3af]" />
+        </motion.button>
+
         <button className="w-9 h-9 rounded-lg bg-[#1f2937] hover:bg-[#374151] transition-all flex items-center justify-center hover:shadow-lg hover:shadow-[#3b82f6]/20">
           <Settings className="w-4 h-4 text-[#9ca3af]" />
         </button>

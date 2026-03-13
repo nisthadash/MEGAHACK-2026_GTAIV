@@ -15,8 +15,10 @@ export function MainIDE() {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const [aiResponse, setAiResponse] = useState("");
   const [activeAITab, setActiveAITab] = useState("Summary");
+  const [showTerminal, setShowTerminal] = useState(false);
 
   const handleRunCode = () => {
+    setShowTerminal(true);
     setTerminalOutput([
       ...terminalOutput,
       "> Running code...",
@@ -102,11 +104,7 @@ If duplicates exist, returns index of any matching element (not necessarily the 
 
   return (
     <div className="h-screen w-screen bg-[#020617] text-[#e5e7eb] flex flex-col overflow-hidden">
-      <TopNavBar
-        onRunCode={handleRunCode}
-        onExplainCode={handleExplainCode}
-        onAIAnalyze={handleAIAnalyze}
-      />
+      <TopNavBar onRunCode={handleRunCode} />
       
       <div className="flex-1 flex overflow-hidden">
         <PanelGroup direction="horizontal">
@@ -119,9 +117,34 @@ If duplicates exist, returns index of any matching element (not necessarily the 
 
           {/* Main Content Area */}
           <Panel defaultSize={55} minSize={30}>
-            <PanelGroup direction="vertical">
-              {/* Code Editor */}
-              <Panel defaultSize={70} minSize={40}>
+            {showTerminal ? (
+              <PanelGroup direction="vertical">
+                {/* Code Editor */}
+                <Panel defaultSize={70} minSize={40}>
+                  {code === "" ? (
+                    <WelcomeScreen onCodeChange={setCode} />
+                  ) : (
+                    <CodeEditor
+                      code={code}
+                      onChange={setCode}
+                      selectedLine={selectedLine}
+                      onLineClick={handleLineClick}
+                    />
+                  )}
+                </Panel>
+
+                <PanelResizeHandle className="h-[1px] bg-[#1f2937] hover:bg-[#22c55e] transition-colors" />
+
+                {/* Terminal */}
+                <Panel defaultSize={30} minSize={15}>
+                  <Terminal
+                    output={terminalOutput}
+                    onClear={() => setTerminalOutput([])}
+                  />
+                </Panel>
+              </PanelGroup>
+            ) : (
+              <div className="h-full">
                 {code === "" ? (
                   <WelcomeScreen onCodeChange={setCode} />
                 ) : (
@@ -132,18 +155,8 @@ If duplicates exist, returns index of any matching element (not necessarily the 
                     onLineClick={handleLineClick}
                   />
                 )}
-              </Panel>
-
-              <PanelResizeHandle className="h-[1px] bg-[#1f2937] hover:bg-[#22c55e] transition-colors" />
-
-              {/* Terminal */}
-              <Panel defaultSize={30} minSize={15}>
-                <Terminal
-                  output={terminalOutput}
-                  onClear={() => setTerminalOutput([])}
-                />
-              </Panel>
-            </PanelGroup>
+              </div>
+            )}
           </Panel>
 
           <PanelResizeHandle className="w-[1px] bg-[#1f2937] hover:bg-[#22c55e] transition-colors" />
