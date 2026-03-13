@@ -16,10 +16,6 @@ export function LoginPage() {
     navigate("/ide");
   };
 
-  const handleSkipLogin = () => {
-    navigate("/ide");
-  };
-
   return (
     <div className="bg-[#0f0f0f] relative h-screen w-screen overflow-hidden">
       {/* Main Heading */}
@@ -31,19 +27,6 @@ export function LoginPage() {
       >
         Welcome Back .!
       </motion.p>
-
-      {/* Skip Button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        onClick={handleSkipLogin}
-        className="absolute left-[82px] px-[24px] py-[14px] top-[512px] border-4 border-solid border-white hover:bg-white/10 transition-colors cursor-pointer"
-      >
-        <p className="font-semibold italic leading-[normal] text-[32px] text-white whitespace-nowrap">
-          Skip the lag ?
-        </p>
-      </motion.button>
 
       {/* Decorative Circle 1 */}
       <div className="absolute left-[749px] size-[302px] top-[81px]">

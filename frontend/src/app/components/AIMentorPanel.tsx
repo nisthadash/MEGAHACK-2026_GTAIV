@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Loader2, MessageSquare, FileText, Bug, Shield, Lightbulb } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface AIMentorPanelProps {
@@ -7,12 +7,75 @@ interface AIMentorPanelProps {
   onTabChange: (tab: string) => void;
   response: string;
   isAnalyzing: boolean;
+  code: string;
 }
 
-const tabs = ["Summary", "Line Explanation", "Bugs", "Optimization", "Visualization"];
+const tabs = [
+  { id: "Comments", label: "Comments", icon: MessageSquare },
+  { id: "Summary", label: "Summary", icon: FileText },
+  { id: "Explanation", label: "Explanation", icon: Lightbulb },
+  { id: "Bugs", label: "Bugs", icon: Bug },
+  { id: "Assumptions", label: "Assumptions", icon: Shield },
+];
 
-export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing }: AIMentorPanelProps) {
+export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing, code }: AIMentorPanelProps) {
   const [chatInput, setChatInput] = useState("");
+  const [liveComments, setLiveComments] = useState<Array<{ line: number; comment: string; type: "info" | "important" | "warning" }>>([]);
+
+  // Real-time comments generation
+  useEffect(() => {
+    if (!code || activeTab !== "Comments") return;
+
+    const timer = setTimeout(() => {
+      generateLiveComments(code);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [code, activeTab]);
+
+  const generateLiveComments = (code: string) => {
+    const lines = code.split("\n");
+    const comments: Array<{ line: number; comment: string; type: "info" | "important" | "warning" }> = [];
+
+    lines.forEach((line, index) => {
+      const lineNum = index + 1;
+      const trimmed = line.trim();
+
+      if (trimmed.includes("function") || trimmed.includes("def ")) {
+        comments.push({
+          line: lineNum,
+          comment: "Function definition — Entry point for logic",
+          type: "important",
+        });
+      } else if (trimmed.includes("for") || trimmed.includes("while")) {
+        comments.push({
+          line: lineNum,
+          comment: "Loop iteration — Processes multiple items",
+          type: "info",
+        });
+      } else if (trimmed.includes("if") || trimmed.includes("else")) {
+        comments.push({
+          line: lineNum,
+          comment: "Conditional check — Controls flow based on condition",
+          type: "info",
+        });
+      } else if (trimmed.includes("return")) {
+        comments.push({
+          line: lineNum,
+          comment: "Return statement — Outputs result to caller",
+          type: "important",
+        });
+      } else if (trimmed.includes("/ 0") || trimmed.includes("/0")) {
+        comments.push({
+          line: lineNum,
+          comment: "Warning — Division by zero will cause error",
+          type: "warning",
+        });
+      }
+    });
+
+    setLiveComments(comments);
+  };
 
   const handleSendMessage = () => {
     if (chatInput.trim()) {
@@ -29,19 +92,23 @@ export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing }:
         
         {/* Tabs */}
         <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => onTabChange(tab)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                activeTab === tab
-                  ? "bg-[#22c55e] text-white shadow-lg shadow-[#22c55e]/20"
-                  : "bg-[#1f2937] text-[#9ca3af] hover:bg-[#374151] hover:text-[#e5e7eb]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  activeTab === tab.id
+                    ? "bg-[#22c55e] text-white shadow-lg shadow-[#22c55e]/20"
+                    : "bg-[#1f2937] text-[#9ca3af] hover:bg-[#374151] hover:text-[#e5e7eb]"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -50,6 +117,8 @@ export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing }:
         <AnimatePresence mode="wait">
           {isAnalyzing ? (
             <AnalyzingAnimation key="analyzing" />
+          ) : activeTab === "Comments" ? (
+            <CommentsTab key="comments" comments={liveComments} code={code} />
           ) : response ? (
             <motion.div
               key="response"
@@ -140,6 +209,64 @@ function AnalyzingAnimation() {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function CommentsTab({ comments, code }: { comments: Array<{ line: number; comment: string; type: "info" | "important" | "warning" }>; code: string }) {
+  if (!code) {
+    return (
+      <div className="text-[#6b7280] text-sm italic">
+        Write some code to see real-time line comments...
+      </div>
+    );
+  }
+
+  if (comments.length === 0) {
+    return (
+      <div className="text-[#6b7280] text-sm italic">
+        Analyzing code... Comments will appear here in 1.5 seconds
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs text-[#9ca3af] mb-3">
+        Real-time line-by-line analysis (updates every 1.5s pause)
+      </div>
+      {comments.map((comment, index) => {
+        const bgColor =
+          comment.type === "info"
+            ? "bg-[#1e3a8a]/20 border-[#3b82f6]"
+            : comment.type === "important"
+            ? "bg-[#14532d]/20 border-[#22c55e]"
+            : "bg-[#7f1d1d]/20 border-[#ef4444]";
+
+        const textColor =
+          comment.type === "info"
+            ? "text-[#3b82f6]"
+            : comment.type === "important"
+            ? "text-[#22c55e]"
+            : "text-[#ef4444]";
+
+        return (
+          <motion.div
+            key={`${comment.line}-${index}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className={`p-3 rounded-lg border ${bgColor} transition-all`}
+          >
+            <div className="flex items-start gap-2">
+              <span className={`text-xs font-mono font-bold ${textColor} min-w-[3rem]`}>
+                Line {comment.line}
+              </span>
+              <span className="text-sm text-[#d1d5db]">{comment.comment}</span>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }
 

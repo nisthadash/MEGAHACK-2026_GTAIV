@@ -20,10 +20,6 @@ export function SignupPage() {
     navigate("/ide");
   };
 
-  const handleSkipSignup = () => {
-    navigate("/ide");
-  };
-
   return (
     <div className="bg-[#0f0f0f] relative h-screen w-screen overflow-hidden">
       {/* Main Heading */}
@@ -35,19 +31,6 @@ export function SignupPage() {
       >
         Roll the Carpet.!
       </motion.p>
-
-      {/* Skip Button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        onClick={handleSkipSignup}
-        className="absolute left-[73px] px-[24px] py-[14px] top-[512px] border-4 border-solid border-white hover:bg-white/10 transition-colors cursor-pointer"
-      >
-        <p className="font-semibold italic leading-[normal] text-[32px] text-white whitespace-nowrap">
-          Skip the lag ?
-        </p>
-      </motion.button>
 
       {/* Decorative Circle 1 */}
       <div className="absolute left-[795px] size-[302px] top-[60px]">

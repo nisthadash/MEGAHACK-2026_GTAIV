@@ -6,6 +6,7 @@ import { CodeEditor } from "./CodeEditor";
 import { Terminal } from "./Terminal";
 import { AIMentorPanel } from "./AIMentorPanel";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { AmIOnTrackBar } from "./AmIOnTrackBar";
 
 export function MainIDE() {
   const [code, setCode] = useState("");
@@ -26,27 +27,24 @@ export function MainIDE() {
 
   const handleExplainCode = () => {
     setIsAnalyzing(true);
-    setActiveAITab("Summary");
+    setActiveAITab("Explanation");
     
     setTimeout(() => {
-      setAiResponse(`# Code Summary
+      setAiResponse(`# Code Explanation
 
-This Python code implements a binary search algorithm to find an element in a sorted array.
+**Lines 1-4 — Setup**
+Initialize the binary search function with array and target parameters. Set up left and right pointers to define the search boundaries.
 
-**Main Components:**
-- \`binary_search(arr, target)\` function that uses divide-and-conquer approach
-- Iterative implementation for better space complexity
-- Returns the index of target element or -1 if not found
+**Lines 5-10 — Main Loop**
+The while loop continues as long as left <= right, ensuring we haven't exhausted all search possibilities. Calculate the middle index to divide the array.
 
-**Algorithm Flow:**
-1. Initialize left and right pointers
-2. Calculate middle index
-3. Compare target with middle element
-4. Adjust search range based on comparison
-5. Repeat until element found or range exhausted
+**Lines 11-15 — Return Value**
+Return the index if element is found, otherwise return -1 to indicate element doesn't exist in the array.
 
-**Time Complexity:** O(log n)
-**Space Complexity:** O(1)`);
+**Algorithm Analysis:**
+- **Time Complexity:** O(log n) - Halves search space each iteration
+- **Space Complexity:** O(1) - Uses constant extra space
+- **Best for:** Sorted arrays with frequent searches`);
       setIsAnalyzing(false);
     }, 3000);
   };
@@ -77,23 +75,27 @@ This Python code implements a binary search algorithm to find an element in a so
 
   const handleAIAnalyze = () => {
     setIsAnalyzing(true);
-    setActiveAITab("Bugs");
+    setActiveAITab("Assumptions");
     
     setTimeout(() => {
-      setAiResponse(`# Bug Analysis
+      setAiResponse(`# Code Assumptions
 
-✅ **No Critical Bugs Found**
+📌 **Input Assumption**
+Assumes the input array is already sorted in ascending order. Binary search will fail on unsorted data.
 
-**Potential Issues:**
-⚠️ Line 5: Integer overflow possible for very large arrays
-   - Suggestion: Use \`mid = left + (right - left) // 2\` instead
+📌 **Data Type Assumption**
+Assumes all array elements are comparable using standard comparison operators (<, >, ==).
 
-✅ **Code Quality:** Excellent
-- Proper edge case handling
-- Clean variable naming
-- Efficient algorithm choice
+📌 **Index Assumption**
+Assumes valid array indices - no negative values or out-of-bounds access.
 
-**Security:** No vulnerabilities detected`);
+📌 **Uniqueness Assumption**
+If duplicates exist, returns index of any matching element (not necessarily the first occurrence).
+
+**Recommendations:**
+- Add input validation to check if array is sorted
+- Consider handling edge cases (empty array, null values)
+- Add documentation about duplicate handling behavior`);
       setIsAnalyzing(false);
     }, 2500);
   };
@@ -153,10 +155,14 @@ This Python code implements a binary search algorithm to find an element in a so
               onTabChange={setActiveAITab}
               response={aiResponse}
               isAnalyzing={isAnalyzing}
+              code={code}
             />
           </Panel>
         </PanelGroup>
       </div>
+
+      {/* Am I On Track Bar */}
+      <AmIOnTrackBar code={code} />
     </div>
   );
 }

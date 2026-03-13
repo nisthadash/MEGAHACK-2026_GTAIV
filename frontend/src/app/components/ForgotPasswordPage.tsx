@@ -25,19 +25,6 @@ export function ForgotPasswordPage() {
         No Worries.!!
       </motion.p>
 
-      {/* Back Button */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        onClick={() => navigate("/login")}
-        className="absolute left-[73px] px-[24px] py-[14px] top-[512px] border-4 border-solid border-white hover:bg-white/10 transition-colors cursor-pointer"
-      >
-        <p className="font-semibold italic leading-[normal] text-[32px] text-white whitespace-nowrap">
-          Take me back.!
-        </p>
-      </motion.button>
-
       {/* Decorative Circle 1 */}
       <div className="absolute left-[798px] size-[302px] top-[62px]">
         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 302 302">
