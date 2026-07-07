@@ -1,38 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "backend/main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/main.py"
-    },
-    {
-      "src": "/docs",
-      "dest": "backend/main.py"
-    },
-    {
-      "src": "/openapi.json",
-      "dest": "backend/main.py"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|ico|woff2|woff|ttf|map|json))$",
-      "dest": "frontend/dist/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/dist/index.html"
-    }
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
