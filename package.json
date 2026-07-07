@@ -5,7 +5,7 @@
   "description": "ExplainMyCode IDE — monorepo dev runner",
   "scripts": {
     "start": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"bgGreen.bold,bgBlue.bold\" --kill-others-on-fail \"npm run backend\" \"npm run frontend\"",
-    "backend": "cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "backend": "cd backend && E:\\SPYDER\\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
     "frontend": "cd frontend && npm run dev",
     "install:frontend": "cd frontend && npm install",
     "install:all": "npm run install:frontend"

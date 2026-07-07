@@ -43,7 +43,7 @@ if not exist "frontend\node_modules" (
 
 REM ── Start Backend in new window ─────────────────────────────
 echo  [*] Starting Backend on http://localhost:8000 ...
-start "ExplainMyCode Backend" cmd /k "cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+start "ExplainMyCode Backend" cmd /k "cd backend && E:\SPYDER\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 
 REM ── Wait 2 seconds for backend to boot ──────────────────────
 timeout /t 2 /nobreak >nul
