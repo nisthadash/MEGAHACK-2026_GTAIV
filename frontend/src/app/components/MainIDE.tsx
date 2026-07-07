@@ -166,6 +166,7 @@ export function MainIDE() {
                       onChange={setCode}
                       selectedLine={selectedLine}
                       onLineClick={handleLineClick}
+                      language={language}
                     />
                   )}
                 </Panel>
@@ -190,6 +191,7 @@ export function MainIDE() {
                     onChange={setCode}
                     selectedLine={selectedLine}
                     onLineClick={handleLineClick}
+                    language={language}
                   />
                 )}
               </div>

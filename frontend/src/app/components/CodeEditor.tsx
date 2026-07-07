@@ -1,11 +1,12 @@
 import { useRef, useEffect } from "react";
-import { motion } from "motion/react";
+import Editor, { Monaco } from "@monaco-editor/react";
 
 interface CodeEditorProps {
   code: string;
   onChange: (code: string) => void;
   selectedLine: number | null;
   onLineClick: (lineNumber: number) => void;
+  language?: string;
 }
 
 const defaultCode = `def binary_search(arr, target):
@@ -26,103 +27,106 @@ numbers = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
 result = binary_search(numbers, 7)
 print(f"Element found at index: {result}")`;
 
-export function CodeEditor({ code, onChange, selectedLine, onLineClick }: CodeEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const displayCode = code || defaultCode;
-  const lines = displayCode.split("\n");
+export function CodeEditor({ code, onChange, selectedLine, onLineClick, language = "python" }: CodeEditorProps) {
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<Monaco | null>(null);
+  const decorationsRef = useRef<string[]>([]);
 
-  useEffect(() => {
-    if (code === "" && textareaRef.current) {
+  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // Define custom theme colors matching the SaaS dark theme (#020617, #111827, #1f2937)
+    monaco.editor.defineTheme("explainmycode-theme", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "6b7280", fontStyle: "italic" },
+        { token: "keyword", foreground: "c084fc", fontStyle: "bold" },
+        { token: "string", foreground: "fbbf24" },
+        { token: "number", foreground: "fb923c" },
+        { token: "type", foreground: "60a5fa" },
+      ],
+      colors: {
+        "editor.background": "#020617",
+        "editor.foreground": "#e5e7eb",
+        "editorLineNumber.foreground": "#4b5563",
+        "editorLineNumber.activeForeground": "#22c55e",
+        "editor.lineHighlightBackground": "#1e293b50",
+        "editorGutter.background": "#111827",
+      },
+    });
+
+    monaco.editor.setTheme("explainmycode-theme");
+
+    // Listen to gutter and editor body clicks to select line
+    editor.onMouseDown((e: any) => {
+      if (e.target && e.target.position) {
+        onLineClick(e.target.position.lineNumber);
+      }
+    });
+
+    // Initial value setup
+    if (!code) {
       onChange(defaultCode);
     }
-  }, []);
+  };
+
+  // Sync decorations for selectedLine
+  useEffect(() => {
+    if (editorRef.current && monacoRef.current) {
+      const editor = editorRef.current;
+      const monaco = monacoRef.current;
+
+      if (selectedLine) {
+        decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [
+          {
+            range: new monaco.Range(selectedLine, 1, selectedLine, 1),
+            options: {
+              isWholeLine: true,
+              className: "bg-[#22c55e]/10 border-l-2 border-[#22c55e]",
+            },
+          },
+        ]);
+      } else {
+        decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
+      }
+    }
+  }, [selectedLine]);
 
   return (
-    <div className="h-full bg-[#020617] flex">
-      {/* Line Numbers */}
-      <div className="bg-[#111827] border-r border-[#1f2937] py-4 pr-4 pl-3 select-none">
-        {lines.map((_, index) => {
-          const lineNumber = index + 1;
-          const isSelected = selectedLine === lineNumber;
-          
-          return (
-            <motion.div
-              key={index}
-              onClick={() => onLineClick(lineNumber)}
-              className={`text-right font-mono text-sm h-6 leading-6 cursor-pointer transition-colors ${
-                isSelected
-                  ? "text-[#22c55e] font-semibold"
-                  : "text-[#6b7280] hover:text-[#9ca3af]"
-              }`}
-              whileHover={{ scale: 1.05 }}
-            >
-              {lineNumber}
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Code Content */}
-      <div className="flex-1 relative overflow-auto">
-        {/* Syntax Highlighted Display */}
-        <div className="absolute inset-0 p-4 pointer-events-none font-mono text-sm leading-6">
-          {lines.map((line, index) => {
-            const lineNumber = index + 1;
-            const isSelected = selectedLine === lineNumber;
-            
-            return (
-              <motion.div
-                key={index}
-                className={`transition-colors ${
-                  isSelected ? "bg-[#22c55e]/10" : ""
-                }`}
-                initial={false}
-                animate={isSelected ? { x: [0, 4, 0] } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                <SyntaxHighlightedLine line={line} />
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Editable Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={displayCode}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
-          className="absolute inset-0 p-4 bg-transparent text-transparent caret-[#22c55e] resize-none outline-none font-mono text-sm leading-6 selection:bg-[#3b82f6]/30"
-          style={{
-            caretColor: "#22c55e",
-          }}
-        />
-      </div>
+    <div className="h-full w-full bg-[#020617] relative">
+      <Editor
+        height="100%"
+        width="100%"
+        language={language === "cpp" ? "cpp" : language === "c" ? "c" : language}
+        value={code || defaultCode}
+        onChange={(val) => onChange(val || "")}
+        onMount={handleEditorDidMount}
+        loading={
+          <div className="flex items-center justify-center h-full w-full bg-[#020617] text-[#9ca3af] text-sm">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#22c55e] mr-3"></div>
+            Loading Editor...
+          </div>
+        }
+        options={{
+          fontSize: 14,
+          lineHeight: 24,
+          fontFamily: "Fira Code, JetBrains Mono, source-code-pro, Menlo, Monaco, Consolas, monospace",
+          minimap: { enabled: false },
+          wordWrap: "on",
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          cursorBlinking: "smooth",
+          cursorSmoothCaretAnimation: "on",
+          scrollbar: {
+            vertical: "visible",
+            horizontal: "visible",
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+          },
+        }}
+      />
     </div>
-  );
-}
-
-function SyntaxHighlightedLine({ line }: { line: string }) {
-  // Simple syntax highlighting for Python
-  const keywords = /\b(def|return|if|elif|else|while|for|in|import|from|class|try|except|finally|with|as|True|False|None|and|or|not|is|lambda|yield|pass|break|continue|raise|assert|del|global|nonlocal|async|await)\b/g;
-  const strings = /(["'`])((?:\\.|(?!\1).)*?)\1/g;
-  const comments = /(#.*$)/gm;
-  const numbers = /\b(\d+)\b/g;
-  const functions = /\b([a-zA-Z_]\w*)\s*(?=\()/g;
-
-  let highlighted = line;
-  
-  // Replace in order: comments, strings, keywords, functions, numbers
-  highlighted = highlighted.replace(comments, '<span class="text-[#6b7280] italic">$1</span>');
-  highlighted = highlighted.replace(strings, '<span class="text-[#fbbf24]">$&</span>');
-  highlighted = highlighted.replace(keywords, '<span class="text-[#c084fc]">$&</span>');
-  highlighted = highlighted.replace(functions, '<span class="text-[#60a5fa]">$&</span>');
-  highlighted = highlighted.replace(numbers, '<span class="text-[#fb923c]">$&</span>');
-
-  return (
-    <div
-      className="text-[#e5e7eb]"
-      dangerouslySetInnerHTML={{ __html: highlighted || " " }}
-    />
   );
 }
