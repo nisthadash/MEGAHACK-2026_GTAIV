@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     COMPILER_IO_API_KEY: Optional[str] = None
     
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/explainmycode"
+    DATABASE_URL: str = "sqlite:///./explainmycode.db"
     SQLALCHEMY_ECHO: bool = False
     
     # JWT
@@ -73,9 +73,6 @@ class Settings(BaseSettings):
         return ["http://localhost:5173", "http://localhost:3000"]
     
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True

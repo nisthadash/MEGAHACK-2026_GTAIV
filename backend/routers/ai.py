@@ -1,9 +1,51 @@
 from fastapi import APIRouter, HTTPException, status
-from schemas.ai_schema import AIExplainRequest, AIExplainResponse, AIMentorRequest, AIMentorResponse
+from schemas.ai_schema import (
+    AIExplainRequest, AIExplainResponse,
+    AIMentorRequest, AIMentorResponse,
+    AICommentsRequest, AICommentsResponse, LineComment,
+)
 from services.mentor_service import mentor_service
 from services.gemini_service import gemini_service
 
 router = APIRouter(prefix="/api/ai", tags=["AI Analysis"])
+
+
+@router.post("/comments", response_model=AICommentsResponse)
+async def get_line_comments(request: AICommentsRequest):
+    """
+    Real-time per-line code comments (uses gemini-2.0-flash-lite for speed)
+
+    Call with 800ms debounce from the frontend as user types.
+    Returns annotated line comments with type: info | important | warning
+    """
+    if len(request.code) > 20000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code size exceeds limit for real-time comments (20KB)"
+        )
+
+    try:
+        raw = await gemini_service.generate_line_comments(
+            code=request.code,
+            language=request.language
+        )
+        comments = [
+            LineComment(
+                line=item.get("line", 0),
+                comment=item.get("comment", ""),
+                type=item.get("type", "info")
+            )
+            for item in raw
+            if isinstance(item, dict) and item.get("line") and item.get("comment")
+        ]
+        return AICommentsResponse(comments=comments)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Comments generation error: {str(e)}"
+        )
+
 
 
 @router.post("/explain", response_model=AIExplainResponse)

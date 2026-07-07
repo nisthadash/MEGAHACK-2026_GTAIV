@@ -41,3 +41,21 @@ class CodeAnalysisResponse(BaseModel):
     complexity_score: float
     quality_score: float
     language_detected: str
+
+
+class LineComment(BaseModel):
+    """A single line comment from AI"""
+    line: int
+    comment: str
+    type: str  # "info" | "important" | "warning"
+
+
+class AICommentsRequest(BaseModel):
+    """Real-time per-line AI comments request"""
+    code: str = Field(..., min_length=1)
+    language: Optional[str] = None
+
+
+class AICommentsResponse(BaseModel):
+    """Real-time per-line AI comments response"""
+    comments: List[LineComment]

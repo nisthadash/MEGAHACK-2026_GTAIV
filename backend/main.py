@@ -99,21 +99,6 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Startup event
-@app.on_event("startup")
-async def startup():
-    """Run on API startup"""
-    logger.info("ExplainMyCode API starting...")
-    logger.info(f"CORS origins: {cors_origins}")
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown():
-    """Run on API shutdown"""
-    logger.info("ExplainMyCode API shutting down...")
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

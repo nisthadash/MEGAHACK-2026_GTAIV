@@ -169,87 +169,62 @@ DESIGN-EXPLAINMYCODE-IDE
 
 ---
 
-# ⚙️ Installation Guide
+# ⚙️ Quick Start — One Command
 
 ## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/explainmycode.git
-cd explainmycode
+cd MEGAHACK-2026_GTAIV
 ```
 
 ---
 
-# 🔧 Backend Setup
-
-Navigate to the backend folder.
+## 2. Configure Environment
 
 ```bash
-cd backend
+cp backend/.env.example backend/.env
 ```
 
-Install dependencies.
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Configure Environment Variables
-
-Create a `.env` file inside the backend folder.
+Open `backend/.env` and fill in:
 
 ```
 GEMINI_API_KEY=your_gemini_api_key
+JWT_SECRET_KEY=any_long_random_string
 ```
 
 ---
 
-## Start Backend Server
+## 3. Install Dependencies
 
 ```bash
-uvicorn main:app --reload
-```
-
-Backend will run at:
-
-```
-http://localhost:8000
-```
-
-You can test APIs here:
-
-```
-http://localhost:8000/docs
+npm install          # installs concurrently (root)
+cd frontend && npm install && cd ..   # installs React deps
+cd backend && pip install -r requirements.txt && cd ..
 ```
 
 ---
 
-# 💻 Frontend Setup
+## 4. Start Everything
 
-Navigate to the frontend folder.
-
-```bash
-cd frontend
-```
-
-Install dependencies.
+**Option A — Single terminal (npm):**
 
 ```bash
-npm install
+npm start
 ```
 
-Run development server.
-
-```bash
-npm run dev
-```
-
-Frontend will run at:
+**Option B — Double-click (Windows):**
 
 ```
-http://localhost:5173
+start.bat
+```
+
+Both servers launch automatically:
+
+```
+Frontend  →  http://localhost:5173
+Backend   →  http://localhost:8000
+API Docs  →  http://localhost:8000/docs
 ```
 
 ---

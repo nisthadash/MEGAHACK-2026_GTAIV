@@ -1,0 +1,21 @@
+# Root — monorepo node_modules (concurrently)
+node_modules/
+package-lock.json
+
+# Backend
+backend/.env
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/venv/
+backend/*.db
+backend/*.pyc
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db

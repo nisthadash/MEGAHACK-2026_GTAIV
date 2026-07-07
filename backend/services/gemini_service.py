@@ -10,10 +10,12 @@ class GeminiService:
     """Service for interacting with Gemini API"""
     
     def __init__(self):
-        """Initialize Gemini client"""
+        """Initialize Gemini clients"""
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        # Use gemini-2.5-flash for optimal speed and cost
+        # Deep analysis — best quality
         self.model = genai.GenerativeModel('gemini-2.5-flash')
+        # Real-time comments — fastest model, lowest latency
+        self.fast_model = genai.GenerativeModel('gemini-2.0-flash-lite')
     
     async def explain_code(self, code: str) -> Dict:
         """
@@ -140,6 +142,59 @@ Respond with ONLY the JSON object."""
                 "performance_issues": [],
                 "suggestions": [str(e)]
             }
+
+
+    async def generate_line_comments(self, code: str, language: str = None) -> list:
+        """
+        Generate real-time per-line comments using gemini-2.0-flash-lite (fastest model)
+
+        Returns:
+            List of dicts with line, comment, type
+        """
+        lang_hint = f" The language is {language}." if language else ""
+        prompt = f"""You are a real-time code assistant.{lang_hint}
+
+Analyze the following code and produce per-line comments for the most important lines.
+Focus on: function definitions, loops, conditions, return statements, assignments, potential bugs.
+
+Code:
+```
+{code}
+```
+
+Respond ONLY with a valid JSON array (no extra text), format:
+[
+  {{"line": <line_number>, "comment": "<short explanation>", "type": "<info|important|warning>"}},
+  ...
+]
+
+Rules:
+- Maximum 15 comments
+- type = "important" for function defs, returns, key logic
+- type = "warning" for potential bugs, risky patterns
+- type = "info" for loops, conditions, assignments
+- Keep each comment under 80 characters
+- Only comment lines that have real content (skip blank lines)"""
+
+        try:
+            # Use fast_model for lowest latency
+            response = await asyncio.to_thread(self.fast_model.generate_content, prompt)
+            response_text = response.text.strip()
+
+            # Strip markdown code fences if present
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.startswith("```"):
+                response_text = response_text[3:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+
+            result = json.loads(response_text.strip())
+            if isinstance(result, list):
+                return result
+            return []
+        except Exception as e:
+            return []
 
 
 # Create singleton instance

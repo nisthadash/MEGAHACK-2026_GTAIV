@@ -1,165 +1,282 @@
-import { useState, useEffect } from "react";
-import { Send, Loader2, MessageSquare, FileText, Bug, Shield, Lightbulb } from "lucide-react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Send, Loader2, MessageSquare, FileText, Bug,
+  Shield, Lightbulb, Zap, AlertCircle, Sparkles,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import type { AIExplainData } from "./MainIDE";
+
+const API_BASE = "http://localhost:8000";
+
+interface LineComment {
+  line: number;
+  comment: string;
+  type: "info" | "important" | "warning";
+}
+
+interface ChatMessage {
+  role: "user" | "ai";
+  content: string;
+  timestamp: Date;
+}
 
 interface AIMentorPanelProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   response: string;
+  aiData: AIExplainData | null;
   isAnalyzing: boolean;
   code: string;
+  language: string;
+  onExplainCode: () => void;
+  apiError: string | null;
 }
 
-const tabs = [
-  { id: "Comments", label: "Comments", icon: MessageSquare },
-  { id: "Summary", label: "Summary", icon: FileText },
-  { id: "Explanation", label: "Explanation", icon: Lightbulb },
-  { id: "Bugs", label: "Bugs", icon: Bug },
-  { id: "Assumptions", label: "Assumptions", icon: Shield },
+const TABS = [
+  { id: "Comments",    label: "Comments",    icon: MessageSquare },
+  { id: "Summary",     label: "Summary",     icon: FileText      },
+  { id: "Explanation", label: "Explanation", icon: Lightbulb     },
+  { id: "Bugs",        label: "Bugs",        icon: Bug           },
+  { id: "Assumptions", label: "Assumptions", icon: Shield        },
+  { id: "Optimize",    label: "Optimize",    icon: Zap           },
 ];
 
-export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing, code }: AIMentorPanelProps) {
-  const [chatInput, setChatInput] = useState("");
-  const [liveComments, setLiveComments] = useState<Array<{ line: number; comment: string; type: "info" | "important" | "warning" }>>([]);
+export function AIMentorPanel({
+  activeTab, onTabChange, response, aiData, isAnalyzing,
+  code, language, onExplainCode, apiError,
+}: AIMentorPanelProps) {
 
-  // Real-time comments generation
+  // â”€â”€â”€ Chat state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [chatInput, setChatInput]     = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // â”€â”€â”€ Real-time comments state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [liveComments, setLiveComments]       = useState<LineComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError]     = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto scroll chat to bottom
   useEffect(() => {
-    if (!code || activeTab !== "Comments") return;
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
-    const timer = setTimeout(() => {
-      generateLiveComments(code);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [code, activeTab]);
-
-  const generateLiveComments = (code: string) => {
-    const lines = code.split("\n");
-    const comments: Array<{ line: number; comment: string; type: "info" | "important" | "warning" }> = [];
-
-    lines.forEach((line, index) => {
-      const lineNum = index + 1;
-      const trimmed = line.trim();
-
-      if (trimmed.includes("function") || trimmed.includes("def ")) {
-        comments.push({
-          line: lineNum,
-          comment: "Function definition — Entry point for logic",
-          type: "important",
-        });
-      } else if (trimmed.includes("for") || trimmed.includes("while")) {
-        comments.push({
-          line: lineNum,
-          comment: "Loop iteration — Processes multiple items",
-          type: "info",
-        });
-      } else if (trimmed.includes("if") || trimmed.includes("else")) {
-        comments.push({
-          line: lineNum,
-          comment: "Conditional check — Controls flow based on condition",
-          type: "info",
-        });
-      } else if (trimmed.includes("return")) {
-        comments.push({
-          line: lineNum,
-          comment: "Return statement — Outputs result to caller",
-          type: "important",
-        });
-      } else if (trimmed.includes("/ 0") || trimmed.includes("/0")) {
-        comments.push({
-          line: lineNum,
-          comment: "Warning — Division by zero will cause error",
-          type: "warning",
-        });
-      }
-    });
-
-    setLiveComments(comments);
-  };
-
-  const handleSendMessage = () => {
-    if (chatInput.trim()) {
-      // Handle chat message
-      setChatInput("");
+  // â”€â”€â”€ Real-time AI comments with 800ms debounce â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const fetchComments = useCallback(async (src: string) => {
+    if (!src.trim() || src.length < 10) {
+      setLiveComments([]);
+      return;
     }
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/ai/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: src, language }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Comments fetch failed");
+      }
+      const data = await res.json();
+      setLiveComments(data.comments ?? []);
+    } catch (e: any) {
+      setCommentsError(e.message);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [language]);
+
+  useEffect(() => {
+    if (activeTab !== "Comments") return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchComments(code), 800);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [code, activeTab, fetchComments]);
+
+  // â”€â”€â”€ Chat send â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const handleSendMessage = useCallback(async () => {
+    const msg = chatInput.trim();
+    if (!msg || isChatLoading) return;
+
+    const userMsg: ChatMessage = { role: "user", content: msg, timestamp: new Date() };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput("");
+    setIsChatLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/ai/mentor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, code: code || undefined }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Mentor API failed");
+      }
+      const data = await res.json();
+      const aiMsg: ChatMessage = { role: "ai", content: data.response, timestamp: new Date() };
+      setChatMessages(prev => [...prev, aiMsg]);
+    } catch (e: any) {
+      const errMsg: ChatMessage = {
+        role: "ai",
+        content: `âš ï¸ Error: ${e.message}`,
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, errMsg]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [chatInput, code, isChatLoading]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
   return (
     <div className="h-full bg-[#111827] flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-[#1f2937]">
-        <h2 className="text-lg font-semibold text-[#e5e7eb] mb-3">AI Mentor</h2>
-        
+      <div className="p-3 border-b border-[#1f2937] flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#22c55e] to-[#3b82f6] flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h2 className="text-sm font-semibold text-[#e5e7eb]">AI Mentor</h2>
+          </div>
+          {/* Explain Code trigger */}
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onExplainCode}
+            disabled={!code.trim() || isAnalyzing}
+            className="px-3 py-1 text-xs font-medium rounded-md bg-[#22c55e]/10 text-[#22c55e] hover:bg-[#22c55e]/20 border border-[#22c55e]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-1" /> : null}
+            {isAnalyzing ? "Analyzingâ€¦" : "âš¡ Explain Code"}
+          </motion.button>
+        </div>
+
         {/* Tabs */}
         <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  activeTab === tab.id
-                    ? "bg-[#22c55e] text-white shadow-lg shadow-[#22c55e]/20"
-                    : "bg-[#1f2937] text-[#9ca3af] hover:bg-[#374151] hover:text-[#e5e7eb]"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => onTabChange(id)}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+                activeTab === id
+                  ? "bg-[#22c55e] text-white shadow shadow-[#22c55e]/30"
+                  : "bg-[#1f2937] text-[#9ca3af] hover:bg-[#374151] hover:text-[#e5e7eb]"
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Response Area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Global API error banner */}
+      {apiError && (
+        <div className="mx-3 mt-2 p-2 rounded-lg bg-[#7f1d1d]/30 border border-[#ef4444]/30 flex items-start gap-2 text-xs text-[#fca5a5]">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      {/* Tab content */}
+      <div className="flex-1 overflow-y-auto p-3 min-h-0">
         <AnimatePresence mode="wait">
-          {isAnalyzing ? (
+          {isAnalyzing && activeTab !== "Comments" ? (
             <AnalyzingAnimation key="analyzing" />
           ) : activeTab === "Comments" ? (
-            <CommentsTab key="comments" comments={liveComments} code={code} />
-          ) : response ? (
-            <motion.div
-              key="response"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="prose prose-invert prose-sm max-w-none"
-            >
-              <ResponseRenderer content={response} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-[#6b7280] text-sm italic"
-            >
-              Click on a line of code or use the AI buttons to get insights...
-            </motion.div>
-          )}
+            <CommentsTab
+              key="comments"
+              comments={liveComments}
+              loading={commentsLoading}
+              error={commentsError}
+              code={code}
+            />
+          ) : activeTab === "Summary" ? (
+            <ListTab key="summary" items={aiData ? [aiData.summary] : []} emptyMsg="Click 'âš¡ Explain Code' to generate a summary." isText />
+          ) : activeTab === "Explanation" ? (
+            <ListTab key="explanation" items={aiData ? [aiData.explanation] : [response]} emptyMsg="Click 'âš¡ Explain Code' or click a line in the editor." isText />
+          ) : activeTab === "Bugs" ? (
+            <ListTab key="bugs" items={aiData?.bugs ?? []} emptyMsg="No bugs detected. Click 'âš¡ Explain Code' to scan." icon="ðŸ›" />
+          ) : activeTab === "Assumptions" ? (
+            <ListTab key="assumptions" items={aiData?.assumptions ?? []} emptyMsg="Click 'âš¡ Explain Code' to detect assumptions." icon="ðŸ“Œ" />
+          ) : activeTab === "Optimize" ? (
+            <ListTab key="optimize" items={aiData?.optimization ?? []} emptyMsg="Click 'âš¡ Explain Code' to get optimization suggestions." icon="âš¡" />
+          ) : null}
         </AnimatePresence>
       </div>
 
-      {/* Chat Input */}
-      <div className="p-4 border-t border-[#1f2937]">
-        <div className="flex gap-2">
+      {/* Chat area */}
+      <div className="border-t border-[#1f2937] flex-shrink-0">
+        {/* Message thread (shown when there are messages) */}
+        {chatMessages.length > 0 && (
+          <div className="max-h-48 overflow-y-auto p-3 space-y-2">
+            {chatMessages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.role === "ai" && (
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22c55e] to-[#3b82f6] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Sparkles className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] px-3 py-1.5 rounded-xl text-xs leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-[#22c55e]/15 text-[#e5e7eb] border border-[#22c55e]/20"
+                      : "bg-[#1f2937] text-[#d1d5db] border border-[#374151]"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </motion.div>
+            ))}
+            {isChatLoading && (
+              <div className="flex gap-2 justify-start">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22c55e] to-[#3b82f6] flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-3 h-3 text-white" />
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-[#1f2937] border border-[#374151] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+        )}
+
+        {/* Input row */}
+        <div className="p-3 flex gap-2">
           <input
             type="text"
             value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Ask AI Mentor about this code..."
-            className="flex-1 h-10 bg-[#1f2937] border border-[#374151] rounded-lg px-4 text-sm text-[#e5e7eb] placeholder:text-[#6b7280] focus:outline-none focus:border-[#22c55e] transition-colors"
+            onChange={e => setChatInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isChatLoading}
+            placeholder="Ask AI Mentor about this codeâ€¦"
+            className="flex-1 h-9 bg-[#1f2937] border border-[#374151] rounded-lg px-3 text-xs text-[#e5e7eb] placeholder:text-[#6b7280] focus:outline-none focus:border-[#22c55e] transition-colors disabled:opacity-50"
           />
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleSendMessage}
-            className="w-10 h-10 bg-[#22c55e] hover:bg-[#16a34a] rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-[#22c55e]/20"
+            disabled={isChatLoading || !chatInput.trim()}
+            className="w-9 h-9 bg-[#22c55e] hover:bg-[#16a34a] rounded-lg flex items-center justify-center transition-colors shadow shadow-[#22c55e]/20 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Send className="w-4 h-4 text-white" />
+            <Send className="w-3.5 h-3.5 text-white" />
           </motion.button>
         </div>
       </div>
@@ -167,101 +284,95 @@ export function AIMentorPanel({ activeTab, onTabChange, response, isAnalyzing, c
   );
 }
 
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 function AnalyzingAnimation() {
-  const steps = [
-    "AI analyzing code...",
-    "Scanning functions...",
-    "Detecting algorithms...",
-    "Generating explanation...",
-  ];
-
+  const steps = ["Scanning functionsâ€¦", "Detecting algorithmsâ€¦", "Analyzing bugsâ€¦", "Generating explanationâ€¦"];
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-4"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       <div className="flex items-center gap-3">
-        <Loader2 className="w-5 h-5 text-[#22c55e] animate-spin" />
-        <span className="text-sm text-[#e5e7eb]">Analyzing your code...</span>
+        <Loader2 className="w-4 h-4 text-[#22c55e] animate-spin" />
+        <span className="text-sm text-[#e5e7eb]">Analyzing your codeâ€¦</span>
       </div>
-
       <div className="space-y-2">
-        {steps.map((step, index) => (
+        {steps.map((step, i) => (
           <motion.div
-            key={index}
-            initial={{ opacity: 0, x: -20 }}
+            key={i}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.5 }}
-            className="flex items-center gap-2 text-sm text-[#9ca3af]"
+            transition={{ delay: i * 0.4 }}
+            className="flex items-center gap-2 text-xs text-[#9ca3af]"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
             {step}
           </motion.div>
         ))}
       </div>
-
-      <div className="mt-6 p-4 bg-[#1f2937] rounded-lg border border-[#374151]">
-        <div className="space-y-2">
-          <div className="h-3 bg-[#374151] rounded animate-pulse" style={{ width: "80%" }} />
-          <div className="h-3 bg-[#374151] rounded animate-pulse" style={{ width: "60%" }} />
-          <div className="h-3 bg-[#374151] rounded animate-pulse" style={{ width: "90%" }} />
-        </div>
+      <div className="p-3 bg-[#1f2937] rounded-lg border border-[#374151] space-y-2">
+        {[80, 60, 90].map((w, i) => (
+          <div key={i} className="h-2.5 bg-[#374151] rounded animate-pulse" style={{ width: `${w}%` }} />
+        ))}
       </div>
     </motion.div>
   );
 }
 
-function CommentsTab({ comments, code }: { comments: Array<{ line: number; comment: string; type: "info" | "important" | "warning" }>; code: string }) {
-  if (!code) {
+function CommentsTab({ comments, loading, error, code }: {
+  comments: LineComment[];
+  loading: boolean;
+  error: string | null;
+  code: string;
+}) {
+  if (!code || code.length < 10) {
+    return <div className="text-[#6b7280] text-xs italic">Write some code to see real-time AI commentsâ€¦</div>;
+  }
+  if (loading) {
     return (
-      <div className="text-[#6b7280] text-sm italic">
-        Write some code to see real-time line comments...
+      <div className="flex items-center gap-2 text-xs text-[#9ca3af]">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#22c55e]" />
+        <span>AI is reading your codeâ€¦ (gemini-2.0-flash-lite)</span>
       </div>
     );
+  }
+  if (error) {
+    return (
+      <div className="p-2 rounded-lg bg-[#7f1d1d]/30 border border-[#ef4444]/30 flex items-start gap-2 text-xs text-[#fca5a5]">
+        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+        {error}
+      </div>
+    );
+  }
+  if (comments.length === 0) {
+    return <div className="text-[#6b7280] text-xs italic">Waiting for you to pause typingâ€¦</div>;
   }
 
-  if (comments.length === 0) {
-    return (
-      <div className="text-[#6b7280] text-sm italic">
-        Analyzing code... Comments will appear here in 1.5 seconds
-      </div>
-    );
-  }
+  const colorMap = {
+    info:      { bg: "bg-[#1e3a8a]/20 border-[#3b82f6]/40", text: "text-[#60a5fa]" },
+    important: { bg: "bg-[#14532d]/20 border-[#22c55e]/40", text: "text-[#4ade80]" },
+    warning:   { bg: "bg-[#7f1d1d]/20 border-[#ef4444]/40", text: "text-[#f87171]" },
+  };
 
   return (
     <div className="space-y-2">
-      <div className="text-xs text-[#9ca3af] mb-3">
-        Real-time line-by-line analysis (updates every 1.5s pause)
+      <div className="text-[10px] text-[#6b7280] mb-2 flex items-center gap-1">
+        <Zap className="w-3 h-3 text-[#22c55e]" />
+        Real-time AI comments Â· gemini-2.0-flash-lite Â· updates on 800ms pause
       </div>
-      {comments.map((comment, index) => {
-        const bgColor =
-          comment.type === "info"
-            ? "bg-[#1e3a8a]/20 border-[#3b82f6]"
-            : comment.type === "important"
-            ? "bg-[#14532d]/20 border-[#22c55e]"
-            : "bg-[#7f1d1d]/20 border-[#ef4444]";
-
-        const textColor =
-          comment.type === "info"
-            ? "text-[#3b82f6]"
-            : comment.type === "important"
-            ? "text-[#22c55e]"
-            : "text-[#ef4444]";
-
+      {comments.map((c, i) => {
+        const { bg, text } = colorMap[c.type as keyof typeof colorMap] ?? colorMap.info;
         return (
           <motion.div
-            key={`${comment.line}-${index}`}
-            initial={{ opacity: 0, x: -10 }}
+            key={`${c.line}-${i}`}
+            initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`p-3 rounded-lg border ${bgColor} transition-all`}
+            transition={{ delay: i * 0.06 }}
+            className={`p-2.5 rounded-lg border ${bg}`}
           >
             <div className="flex items-start gap-2">
-              <span className={`text-xs font-mono font-bold ${textColor} min-w-[3rem]`}>
-                Line {comment.line}
+              <span className={`text-[10px] font-mono font-bold ${text} min-w-[3rem] flex-shrink-0`}>
+                Line {c.line}
               </span>
-              <span className="text-sm text-[#d1d5db]">{comment.comment}</span>
+              <span className="text-xs text-[#d1d5db] leading-relaxed">{c.comment}</span>
             </div>
           </motion.div>
         );
@@ -270,69 +381,47 @@ function CommentsTab({ comments, code }: { comments: Array<{ line: number; comme
   );
 }
 
-function ResponseRenderer({ content }: { content: string }) {
-  // Simple markdown-like rendering
-  const lines = content.split("\n");
-
+function ListTab({ items, emptyMsg, icon, isText }: {
+  items: string[];
+  emptyMsg: string;
+  icon?: string;
+  isText?: boolean;
+}) {
+  if (!items.length || (items.length === 1 && !items[0])) {
+    return <div className="text-[#6b7280] text-xs italic">{emptyMsg}</div>;
+  }
+  if (isText) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-sm text-[#d1d5db] leading-relaxed whitespace-pre-wrap"
+      >
+        {items[0]}
+      </motion.div>
+    );
+  }
   return (
-    <div className="space-y-3">
-      {lines.map((line, index) => {
-        // Headers
-        if (line.startsWith("# ")) {
-          return (
-            <h2 key={index} className="text-lg font-bold text-[#e5e7eb] mb-2">
-              {line.substring(2)}
-            </h2>
-          );
-        }
-        
-        // Subheaders
-        if (line.startsWith("**") && line.endsWith("**")) {
-          return (
-            <h3 key={index} className="font-semibold text-[#e5e7eb] mt-3">
-              {line.substring(2, line.length - 2)}
-            </h3>
-          );
-        }
-        
-        // List items
-        if (line.startsWith("- ") || line.startsWith("⚠️") || line.startsWith("✅")) {
-          return (
-            <div key={index} className="text-sm text-[#d1d5db] ml-2">
-              {line}
-            </div>
-          );
-        }
-        
-        // Code-like text
-        if (line.includes("`") && line.includes("`")) {
-          const parts = line.split("`");
-          return (
-            <div key={index} className="text-sm text-[#d1d5db]">
-              {parts.map((part, i) =>
-                i % 2 === 1 ? (
-                  <code key={i} className="px-2 py-0.5 bg-[#1f2937] rounded text-[#22c55e] font-mono text-xs">
-                    {part}
-                  </code>
-                ) : (
-                  <span key={i}>{part}</span>
-                )
-              )}
-            </div>
-          );
-        }
-        
-        // Regular text
-        if (line.trim()) {
-          return (
-            <p key={index} className="text-sm text-[#d1d5db]">
-              {line}
-            </p>
-          );
-        }
-        
-        return null;
-      })}
-    </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+      {items.map((item, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.07 }}
+          className="p-2.5 rounded-lg bg-[#1f2937] border border-[#374151] text-xs text-[#d1d5db] leading-relaxed"
+        >
+          {icon && <span className="mr-1.5">{icon}</span>}
+          {item}
+        </motion.div>
+      ))}
+    </motion.div>
   );
 }
+
+
+interface AIMentorPanelProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  response: string;
+  isAnalyzing: boolean;
