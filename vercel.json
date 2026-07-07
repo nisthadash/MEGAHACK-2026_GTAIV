@@ -3,7 +3,7 @@
     "backend": {
       "source": "backend",
       "runtime": "python",
-      "entrypoint": "main.py"
+      "entrypoint": "main.py:app"
     },
     "frontend": {
       "source": "frontend"
