@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Send, Loader2, MessageSquare, FileText, Bug,
   Shield, Lightbulb, Zap, AlertCircle, Sparkles,
@@ -418,10 +418,3 @@ function ListTab({ items, emptyMsg, icon, isText }: {
     </motion.div>
   );
 }
-
-
-interface AIMentorPanelProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  response: string;
-  isAnalyzing: boolean;
