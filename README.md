@@ -1,365 +1,154 @@
-# ExplainMyCode IDE
+# ⚡ ExplainMyCode IDE
 
-ExplainMyCode is an **AI-powered coding IDE and learning platform** designed to help programmers understand, debug, and improve their code faster.
-It combines the power of modern developer tools with AI mentoring to create an interactive learning and coding environment.
+ExplainMyCode is a premium, AI-powered coding IDE and learning platform designed to help programmers understand, debug, and improve their code faster. It combines the power of modern developer tools with AI mentoring to create an interactive learning and coding environment.
 
-The platform merges ideas from tools like **VS Code, GitHub Copilot, and ChatGPT** into a single developer experience.
-
----
-
-# 🚀 Features
-
-## AI Mentor
-
-An intelligent AI assistant that helps programmers understand their code.
-
-Capabilities include:
-
-* Code summary
-* Line-by-line explanation
-* Bug detection
-* Assumption detection
-* Optimization suggestions
-* Interactive AI chat
+The platform merges ideas from tools like **VS Code, GitHub Copilot, and ChatGPT** into a single cohesive developer experience.
 
 ---
 
-## Code Editor
+## 🚀 Features
 
-Built using **Monaco Editor**, providing a modern coding environment.
+### 🤖 AI Mentor Panel
+An intelligent AI assistant that helps programmers understand and optimize their code.
+- **Comments (Real-time)**: Line-by-line comments generated automatically within 800ms of typing pauses, powered by **`gemini-2.0-flash-lite`** for high-speed responsiveness.
+- **Summary**: A concise paragraph overview explaining what the entire file accomplishes.
+- **Explanation**: A section-by-section breakdown of the program's logic.
+- **Bugs**: Identifies syntax issues, logical bugs, and potential runtime errors.
+- **Assumptions**: Highlights hidden assumptions (e.g. data types, sorting requirements).
+- **Optimize**: Provides performance, readability, and structural improvement suggestions.
+- **Interactive AI Chat**: Let's you ask follow-up questions directly about the file.
 
-Features:
+### 📝 Monaco Code Editor
+A modern, scrollable coding environment supporting syntax highlighting, line numbers, cursor selection, and active line tracking for Python, JavaScript, C++, C, and Java.
 
-* Syntax highlighting
-* Line numbers
-* Active line highlighting
-* Scrollable editor
-* Multiple language support
+### 💻 Integrated Terminal
+A terminal console to run python programs locally via FastAPI subprocess execution, returning outputs and traceback stderr.
 
-Supported languages:
+### 📊 AI Analysis Dashboard
+Visual analytics including total lines of code, function counts, loops, conditional counts, cyclomatic complexity, and quality metrics using AST-based analysis and Recharts.
 
-* Python
-* JavaScript
-* C++
-* Java
-* C
-
----
-
-## Terminal
-
-Integrated terminal for executing code directly from the IDE.
-
-Capabilities:
-
-* Run code
-* Display output
-* Show error logs
-* Clear terminal
-
-Code execution is handled by the **FastAPI backend using Python subprocess execution**.
+### 🔮 Algorithm Visualizer
+Interactive step-by-step animations for algorithm execution (e.g., Bubble Sort, Binary Search, Graph Traversal).
 
 ---
 
-## AI Analysis Dashboard
+## 🧠 Technology Stack
 
-Displays insights about the code structure and quality.
+### Frontend
+- **React & TypeScript**
+- **Vite** (build system)
+- **Tailwind CSS**
+- **Monaco Editor**
+- **Framer Motion** & **Radix UI**
+- **Recharts**
 
-Metrics include:
-
-* Total lines of code
-* Number of functions
-* Loops
-* Conditional statements
-* Code quality score
-* Algorithm detection
-
-Visual elements include charts and metric cards.
-
----
-
-## Algorithm Visualization
-
-Interactive animations to understand algorithms step-by-step.
-
-Supported visualizations:
-
-* Bubble Sort
-* Binary Search
-* Recursion Trees
-* Graph Traversal
-
-Controls:
-
-* Play
-* Pause
-* Step
-* Reset
+### Backend
+- **FastAPI** & **Python**
+- **Google Gemini API** (using `gemini-2.5-flash` for deep analysis and `gemini-2.0-flash-lite` for real-time comments)
+- **SQLAlchemy** with **SQLite** database
+- **Python AST** (for static code analysis metrics)
 
 ---
 
-# 🧠 Technology Stack
-
-## Frontend
-
-The frontend is built using modern web technologies.
-
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* Monaco Editor
-* Recharts
-* Radix UI
-* Framer Motion
-
----
-
-## Backend
-
-The backend powers AI processing and code execution.
-
-* FastAPI
-* Python
-* Gemini API
-* Python AST (code analysis)
-* Python subprocess (code execution)
-
----
-
-# 📁 Project Structure
+## 📁 Project Structure
 
 ```text
-DESIGN-EXPLAINMYCODE-IDE
-│
-├── frontend
-│   ├── src
-│   ├── node_modules
+MEGAHACK-2026_GTAIV/
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── App.tsx
+│   │   │   ├── routes.ts
+│   │   │   └── components/       # UI components (Editor, Terminal, AI Mentor, etc.)
+│   │   ├── styles/
+│   │   └── main.tsx            # Application entry point
 │   ├── index.html
 │   ├── package.json
-│   ├── package-lock.json
 │   ├── vite.config.ts
-│   ├── postcss.config.mjs
-│   └── .vite
+│   └── postcss.config.mjs
 │
-├── backend
-│   ├── main.py
-│   ├── routers
-│   │   ├── ai.py
-│   │   ├── execute.py
-│   │   └── analysis.py
-│   │
-│   ├── services
-│   │   ├── gemini_service.py
-│   │   ├── compiler_service.py
-│   │   └── analysis_service.py
-│   │
-│   ├── schemas
-│   ├── utils
+├── backend/
+│   ├── docs/                   # API reference, architecture, & guide docs
+│   ├── database/               # SQLite DB configuration
+│   ├── models/                 # SQLAlchemy schemas
+│   ├── routers/                # FastAPI routing paths (AI, execute, files)
+│   ├── schemas/                # Pydantic data schemas
+│   ├── services/               # AI & compiler integration layer
+│   ├── main.py                 # FastAPI launch file
+│   ├── config.py               # Env parsing & settings
 │   ├── requirements.txt
-│   ├── .env
-│   ├── .venv
-│   └── test_root.py
+│   ├── test_root.py
+│   └── .env.example
 │
-├── guidelines
+├── guidelines/                 # UI Specifications & prompts
+│   ├── Guidelines.md
+│   ├── explain-my-code-prompt.md
+│   └── explainmycode-ui-spec.md
 │
+├── .gitignore
 ├── ATTRIBUTIONS.md
-└── README.md
+├── package.json                # Root monorepo dev runner
+└── start.bat                   # Windows quick launcher
 ```
 
 ---
 
-# ⚙️ Quick Start — One Command
+## ⚙️ Quick Start
 
-## 1. Clone the Repository
-
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/yourusername/explainmycode.git
 cd MEGAHACK-2026_GTAIV
 ```
 
----
-
-## 2. Configure Environment
-
+### 2. Configure Environment Variables
+Copy the template and fill in your keys:
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Open `backend/.env` and fill in:
-
-```
+Open `backend/.env` and update:
+```env
 GEMINI_API_KEY=your_gemini_api_key
-JWT_SECRET_KEY=any_long_random_string
+JWT_SECRET_KEY=generate_a_long_secret_key
 ```
 
----
-
-## 3. Install Dependencies
-
+### 3. Install Dependencies
 ```bash
-npm install          # installs concurrently (root)
-cd frontend && npm install && cd ..   # installs React deps
+# Install root orchestrator
+npm install
+
+# Install Frontend dependencies
+cd frontend && npm install && cd ..
+
+# Install Backend dependencies
 cd backend && pip install -r requirements.txt && cd ..
 ```
 
----
+### 4. Run the Dev Servers
 
-## 4. Start Everything
-
-**Option A — Single terminal (npm):**
-
+#### Option A — Single terminal (recommended)
 ```bash
 npm start
 ```
+Starts both the frontend and backend in sync.
 
-**Option B — Double-click (Windows):**
-
-```
-start.bat
-```
-
-Both servers launch automatically:
-
-```
-Frontend  →  http://localhost:5173
-Backend   →  http://localhost:8000
-API Docs  →  http://localhost:8000/docs
-```
+#### Option B — Windows double-click
+Run **`start.bat`** from the file explorer. It automatically tests prerequisites and opens separate backend/frontend shells.
 
 ---
 
-# 🔗 API Endpoints
+## 🔗 Core API Endpoints
 
-## Run Code
-
-```
-POST /api/execute
-```
-
-Runs Python code and returns output.
-
----
-
-## AI Code Explanation
-
-```
-POST /api/ai/explain
-```
-
-Returns:
-
-* Code summary
-* Explanation
-* Bugs
-* Assumptions
-* Optimization suggestions
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/execute` | `POST` | Executes code snippet and returns output/stderr. |
+| `/api/ai/comments` | `POST` | Real-time debounced per-line code comments. |
+| `/api/ai/explain` | `POST` | Main code explanation (populates summary, explanation, bugs, etc.) |
+| `/api/ai/mentor` | `POST` | Conversational query to the mentor assistant. |
+| `/api/analysis` | `POST` | Performs AST complexity and quality analysis. |
 
 ---
 
-## AI Mentor Chat
-
-```
-POST /api/ai/mentor
-```
-
-Allows the user to ask questions about their code.
-
----
-
-## Code Analysis
-
-```
-POST /api/analysis
-```
-
-Returns:
-
-* Total lines
-* Functions
-* Loops
-* Conditions
-* Quality score
-
----
-
-# ▶️ Running the Full Project
-
-Start backend:
-
-```bash
-cd backend
-uvicorn main:app --reload
-```
-
-Start frontend:
-
-```bash
-cd frontend
-npm run dev
-```
-
-Open the application:
-
-```
-http://localhost:5173
-```
-
----
-
-# 🏗 System Architecture
-
-```
-React Frontend
-      │
-      ▼
-FastAPI Backend
-      │
-      ├ Gemini API → AI explanations
-      ├ Python subprocess → code execution
-      └ Python AST → code analysis
-```
-
----
-
-# ⚠ Known Limitations
-
-* Currently supports **Python code execution only**
-* File persistence is limited
-* AI analysis depends on API availability
-
----
-
-# 🔮 Future Improvements
-
-Planned improvements include:
-
-* Multi-language code execution
-* Git integration
-* Collaborative coding
-* Real-time AI suggestions
-* Cloud deployment
-* AI debugging assistant
-
----
-
-# 📜 License
-
-MIT License
-
----
-
-# 🙌 Acknowledgements
-
-Inspired by modern developer tools such as:
-
-* VS Code
-* ChatGPT
-* GitHub Copilot
-
----
-
-# 👨‍💻 Author
-
-GTA IV
-
+## 📜 License
+This project is licensed under the MIT License. See [ATTRIBUTIONS.md](file:///c:/Users/nisth/MEGAHACK-2026_GTAIV/ATTRIBUTIONS.md) for open-source details.
