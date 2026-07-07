@@ -3,7 +3,7 @@
     "backend": {
       "root": "backend",
       "framework": null,
-      "entrypoint": "main.py"
+      "entrypoint": "main"
     },
     "frontend": {
       "root": "frontend"
