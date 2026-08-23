@@ -12,10 +12,10 @@ class GeminiService:
     def __init__(self):
         """Initialize Gemini clients"""
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        # Deep analysis — best quality
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
-        # Real-time comments — fastest model, lowest latency
-        self.fast_model = genai.GenerativeModel('gemini-2.0-flash-lite')
+        # Deep analysis & mentoring — best quality model
+        self.model = genai.GenerativeModel('gemini-3.6-flash')
+        # Real-time line comments & quick tasks — low latency model
+        self.fast_model = genai.GenerativeModel('gemini-3.1-flash-lite')
     
     async def explain_code(self, code: str) -> Dict:
         """
