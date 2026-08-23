@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Send, Loader2, MessageSquare, FileText, Bug,
-  Shield, Lightbulb, Zap, AlertCircle, Sparkles,
+  Shield, Lightbulb, Zap, AlertCircle, Sparkles, Edit3, Copy, Trash2, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AIExplainData } from "./MainIDE";
@@ -39,6 +39,7 @@ const TABS = [
   { id: "Bugs",        label: "Bugs",        icon: Bug           },
   { id: "Assumptions", label: "Assumptions", icon: Shield        },
   { id: "Optimize",    label: "Optimize",    icon: Zap           },
+  { id: "Scratchpad",  label: "Scratchpad",  icon: Edit3         },
 ];
 
 export function AIMentorPanel({
@@ -204,12 +205,15 @@ export function AIMentorPanel({
             <ListTab key="summary" items={aiData ? [aiData.summary] : []} emptyMsg="Click 'âš¡ Explain Code' to generate a summary." isText />
           ) : activeTab === "Explanation" ? (
             <ListTab key="explanation" items={aiData ? [aiData.explanation] : [response]} emptyMsg="Click 'âš¡ Explain Code' or click a line in the editor." isText />
+            <ListTab key="explanation" items={aiData ? [aiData.explanation] : [response]} emptyMsg="Click '⚡ Explain Code' or click a line in the editor." isText />
           ) : activeTab === "Bugs" ? (
-            <ListTab key="bugs" items={aiData?.bugs ?? []} emptyMsg="No bugs detected. Click 'âš¡ Explain Code' to scan." icon="ðŸ›" />
+            <ListTab key="bugs" items={aiData?.bugs ?? []} emptyMsg="No bugs detected. Click '⚡ Explain Code' to scan." icon="🐛" />
           ) : activeTab === "Assumptions" ? (
-            <ListTab key="assumptions" items={aiData?.assumptions ?? []} emptyMsg="Click 'âš¡ Explain Code' to detect assumptions." icon="ðŸ“Œ" />
+            <ListTab key="assumptions" items={aiData?.assumptions ?? []} emptyMsg="Click '⚡ Explain Code' to detect assumptions." icon="📌" />
           ) : activeTab === "Optimize" ? (
-            <ListTab key="optimize" items={aiData?.optimization ?? []} emptyMsg="Click 'âš¡ Explain Code' to get optimization suggestions." icon="âš¡" />
+            <ListTab key="optimize" items={aiData?.optimization ?? []} emptyMsg="Click '⚡ Explain Code' to get optimization suggestions." icon="⚡" />
+          ) : activeTab === "Scratchpad" ? (
+            <ScratchpadTab key="scratchpad" code={code} />
           ) : null}
         </AnimatePresence>
       </div>
@@ -418,3 +422,75 @@ function ListTab({ items, emptyMsg, icon, isText }: {
     </motion.div>
   );
 }
+
+function ScratchpadTab({ code }: { code: string }) {
+  const [scratchContent, setScratchContent] = useState(() => {
+    return localStorage.getItem("explainmycode_scratchpad") || "";
+  });
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("explainmycode_scratchpad", scratchContent);
+  }, [scratchContent]);
+
+  const handleAppendCurrentCode = () => {
+    if (!code) return;
+    const formattedCode = `\n\`\`\`\n${code}\n\`\`\`\n`;
+    setScratchContent((prev) => (prev ? prev + formattedCode : formattedCode.trimStart()));
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(scratchContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClear = () => {
+    setScratchContent("");
+    localStorage.removeItem("explainmycode_scratchpad");
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-[#22c55e] flex items-center gap-1">
+          <Sparkles className="w-3.5 h-3.5" /> Quick Notes & Drafts (Auto-Saved)
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleAppendCurrentCode}
+            disabled={!code}
+            className="px-2 py-1 text-[11px] font-medium rounded bg-[#3b82f6]/20 text-[#60a5fa] hover:bg-[#3b82f6]/30 border border-[#3b82f6]/30 disabled:opacity-40 transition-all"
+            title="Append code from editor into Scratchpad"
+          >
+            + Append Editor Code
+          </button>
+          <button
+            onClick={handleCopy}
+            disabled={!scratchContent}
+            className="p-1 rounded bg-[#1f2937] text-[#9ca3af] hover:text-white border border-[#374151] transition-all disabled:opacity-40"
+            title="Copy Scratchpad"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-[#22c55e]" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={handleClear}
+            disabled={!scratchContent}
+            className="p-1 rounded bg-[#1f2937] text-[#9ca3af] hover:text-[#ef4444] border border-[#374151] transition-all disabled:opacity-40"
+            title="Clear Scratchpad"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        value={scratchContent}
+        onChange={(e) => setScratchContent(e.target.value)}
+        placeholder="Type quick notes, task reminders, or draft code snippets here..."
+        className="w-full flex-1 min-h-[220px] p-3 rounded-lg bg-[#111827] border border-[#374151] text-xs font-mono text-[#e5e7eb] focus:outline-none focus:border-[#22c55e] resize-none leading-relaxed"
+      />
+    </motion.div>
+  );
+}
+
