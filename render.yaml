@@ -1,0 +1,27 @@
+services:
+  # 1. Backend FastAPI Service (Free Tier)
+  - type: web
+    name: explainmycode-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        value: a3f8d2c1e9b47056f3a8d2c1e9b47056f3a8d2c1e9b47056f3a8d2c1e9b47056
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # 2. Frontend React/Vite Static Site (Free Tier)
+  - type: web
+    name: explainmycode-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
