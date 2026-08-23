@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, Header, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from schemas.code_schema import FileCreate, FileUpdate, FileResponse, FileListResponse
 from models.file import File
 from models.user import User
@@ -10,37 +10,40 @@ from utils.auth_utils import decode_access_token
 router = APIRouter(prefix="/api/files", tags=["File Management"])
 
 
-async def get_current_user(authorization: str, db: Session = Depends(get_db)):
-    """Extract and validate user from authorization header"""
+async def get_current_user(
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+    db: Session = Depends(get_db)
+):
+    """Extract and validate user from Authorization HTTP header"""
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authorization header"
+            detail="Missing Authorization header"
         )
-    
+
     try:
-        token = authorization.replace("Bearer ", "")
+        token = authorization.replace("Bearer ", "").strip()
         payload = decode_access_token(token)
         if payload is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
-        
+
         user_id = payload.get("user_id")
         user = db.query(User).filter(User.id == user_id).first()
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         return user
-    
+
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
@@ -50,16 +53,14 @@ async def get_current_user(authorization: str, db: Session = Depends(get_db)):
 @router.post("", response_model=FileResponse, status_code=status.HTTP_201_CREATED)
 async def create_file(
     file_data: FileCreate,
-    authorization: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """
     Create a new file
     
     Supported languages: python, javascript, java, cpp, c
     """
-    
-    user = await get_current_user(authorization, db)
     
     # Validate language
     supported_languages = ["python", "javascript", "java", "cpp", "c"]
@@ -119,12 +120,10 @@ async def create_file(
 
 @router.get("", response_model=FileListResponse)
 async def list_files(
-    authorization: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Get all files for current user"""
-    
-    user = await get_current_user(authorization, db)
     
     try:
         files = db.query(File).filter(File.owner_id == user.id).all()
@@ -153,12 +152,10 @@ async def list_files(
 @router.get("/{file_id}", response_model=FileResponse)
 async def get_file(
     file_id: int,
-    authorization: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Get a specific file"""
-    
-    user = await get_current_user(authorization, db)
     
     file = db.query(File).filter(
         File.id == file_id,
@@ -185,12 +182,10 @@ async def get_file(
 async def update_file(
     file_id: int,
     file_data: FileUpdate,
-    authorization: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Update a file (name and/or content)"""
-    
-    user = await get_current_user(authorization, db)
     
     file = db.query(File).filter(
         File.id == file_id,
@@ -250,12 +245,10 @@ async def update_file(
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_file(
     file_id: int,
-    authorization: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
     """Delete a file"""
-    
-    user = await get_current_user(authorization, db)
     
     file = db.query(File).filter(
         File.id == file_id,

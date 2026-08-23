@@ -84,7 +84,9 @@ export function CodeEditor({ code, onChange, selectedLine, onLineClick, language
             range: new monaco.Range(selectedLine, 1, selectedLine, 1),
             options: {
               isWholeLine: true,
-              className: "bg-[#22c55e]/10 border-l-2 border-[#22c55e]",
+              // Use Monaco's backgroundColor token instead of Tailwind className
+              className: "selected-line-highlight",
+              linesDecorationsClassName: "selected-line-gutter",
             },
           },
         ]);

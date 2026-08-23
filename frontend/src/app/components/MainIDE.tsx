@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { TopNavBar } from "./TopNavBar";
 import { FileExplorer } from "./FileExplorer";
@@ -7,6 +7,7 @@ import { Terminal } from "./Terminal";
 import { AIMentorPanel } from "./AIMentorPanel";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { AmIOnTrackBar } from "./AmIOnTrackBar";
+import { saveCodeSnapshot } from "./AIAnalysisDashboard";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -30,6 +31,11 @@ export function MainIDE() {
   const [activeAITab, setActiveAITab] = useState("Comments");
   const [showTerminal, setShowTerminal] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // ─── Persist code snapshot for Analysis Dashboard ─────────────────────────
+  useEffect(() => {
+    saveCodeSnapshot(code);
+  }, [code]);
 
   // ─── Run Code via backend ──────────────────────────────────────────────────
   const handleRunCode = useCallback(async () => {
@@ -142,13 +148,20 @@ export function MainIDE() {
 
   return (
     <div className="h-screen w-screen bg-[#020617] text-[#e5e7eb] flex flex-col overflow-hidden">
-      <TopNavBar onRunCode={handleRunCode} />
+      <TopNavBar onRunCode={handleRunCode} language={language} onLanguageChange={setLanguage} />
 
       <div className="flex-1 flex overflow-hidden">
         <PanelGroup direction="horizontal">
           {/* File Explorer */}
           <Panel defaultSize={15} minSize={10} maxSize={25}>
-            <FileExplorer />
+            <FileExplorer
+              onFileOpen={(content, lang, _name) => {
+                setCode(content);
+                setLanguage(lang);
+              }}
+              currentCode={code}
+              currentLanguage={language}
+            />
           </Panel>
 
           <PanelResizeHandle className="w-[1px] bg-[#1f2937] hover:bg-[#22c55e] transition-colors" />

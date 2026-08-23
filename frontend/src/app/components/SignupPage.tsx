@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
+import { saveAuth } from "../auth";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -9,15 +11,54 @@ export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
-    // Navigate to IDE after signup
-    navigate("/ide");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail || "Signup failed. Please try again.");
+        return;
+      }
+
+      // Store JWT + user info
+      saveAuth(data.access_token, {
+        id: data.user.id,
+        username: data.user.username,
+        email: data.user.email,
+      });
+
+      navigate("/ide");
+    } catch {
+      setError("Cannot connect to server. Make sure the backend is running.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -80,6 +121,17 @@ export function SignupPage() {
             <p className="font-medium text-[16px] text-white">Just some details to get you in.!</p>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 px-4 py-3 rounded-[10px] bg-red-500/20 border border-red-500/40 text-red-300 text-sm"
+            >
+              {error}
+            </motion.div>
+          )}
+
           {/* Signup Form */}
           <form onSubmit={handleSignup} className="flex flex-col gap-[25px]">
             {/* Username Input */}
@@ -88,15 +140,17 @@ export function SignupPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
+              required
               className="w-full px-[16px] py-[14px] rounded-[12px] border border-solid border-white bg-transparent text-[20px] text-white placeholder:text-white/60 focus:outline-none focus:border-[#3b82f6] transition-colors"
             />
 
-            {/* Email/Phone Input */}
+            {/* Email Input */}
             <input
-              type="text"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email / Phone"
+              placeholder="Email"
+              required
               className="w-full px-[16px] py-[14px] rounded-[12px] border border-solid border-white bg-transparent text-[20px] text-white placeholder:text-white/60 focus:outline-none focus:border-[#3b82f6] transition-colors"
             />
 
@@ -107,6 +161,7 @@ export function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
+                required
                 className="w-full px-[16px] py-[14px] rounded-[12px] border border-solid border-white bg-transparent text-[20px] text-white placeholder:text-white/60 focus:outline-none focus:border-[#3b82f6] transition-colors"
               />
               <input
@@ -114,6 +169,7 @@ export function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm Password"
+                required
                 className="w-full px-[16px] py-[14px] rounded-[12px] border border-solid border-white bg-transparent text-[20px] text-white placeholder:text-white/60 focus:outline-none focus:border-[#3b82f6] transition-colors"
               />
             </div>
@@ -123,13 +179,14 @@ export function SignupPage() {
               type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full px-[10px] py-[14px] rounded-[12px] font-semibold text-[20px] text-white"
+              disabled={isLoading}
+              className="w-full px-[10px] py-[14px] rounded-[12px] font-semibold text-[20px] text-white disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
                 backgroundImage:
                   "linear-gradient(94.117deg, rgb(46, 76, 238) 9.9097%, rgb(34, 30, 191) 53.286%, rgb(4, 15, 117) 91.559%)",
               }}
             >
-              Signup
+              {isLoading ? "Creating account…" : "Signup"}
             </motion.button>
           </form>
 
@@ -159,7 +216,7 @@ export function SignupPage() {
               </button>
             </p>
             <div className="bg-gradient-to-b from-[rgba(98,98,98,0)] to-[rgba(98,98,98,0.07)] flex items-center justify-between px-[6px] py-[4px] rounded-[6px]">
-              <p className="font-normal text-[16px] text-white">Terms & Conditions</p>
+              <p className="font-normal text-[16px] text-white">Terms &amp; Conditions</p>
               <p className="font-normal text-[16px] text-white">Support</p>
               <p className="font-normal text-[16px] text-white">Customer Care</p>
             </div>
